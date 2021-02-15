@@ -56,7 +56,7 @@ export default NextAuth({
     // if you want to override the default behaviour.
     encode: async ({ secret, token, maxAge }) => {
       const jwtClaims = {
-        sub: token.id,
+        sub: token.id.toString(),
         name: token.name,
         email: token.email,
         iat: Date.now() / 1000,
@@ -98,8 +98,25 @@ export default NextAuth({
   callbacks: {
     // async signIn(user, account, profile) { return true },
     // async redirect(url, baseUrl) { return baseUrl },
-    // async session(session, user) { return session },
-    // async jwt(token, user, account, profile, isNewUser) { return token }
+    async session(session, token) {
+      const encodedToken = jwt.sign(token, process.env.SECRET, {
+        algorithm: "HS256",
+      });
+
+      session.id = token.id;
+      session.token = encodedToken;
+
+      return Promise.resolve(session);
+    },
+    async jwt(token, user, account, profile, isNewUser) {
+      const isUserSignedIn = user ? user : false;
+
+      if (isUserSignedIn) {
+        token.id = user.id.toString();
+      }
+
+      return Promise.resolve(token);
+    },
   },
 
   // Events are useful for logging
@@ -107,5 +124,5 @@ export default NextAuth({
   events: {},
 
   // Enable debug messages in the console if you are having problems
-  debug: false,
+  debug: true,
 });
